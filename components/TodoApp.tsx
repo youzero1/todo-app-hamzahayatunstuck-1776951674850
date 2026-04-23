@@ -13,6 +13,7 @@ export default function TodoApp() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [supabaseAvailable, setSupabaseAvailable] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const supabase = getSupabaseClient();
 
@@ -23,6 +24,7 @@ export default function TodoApp() {
       return;
     }
     setLoading(true);
+    setConnectionError(null);
     const { data, error } = await supabase
       .from('todos')
       .select('*')
@@ -30,6 +32,7 @@ export default function TodoApp() {
 
     if (error) {
       console.error('Error fetching todos:', error.message);
+      setConnectionError(error.message);
     } else {
       setTodos((data as Todo[]) || []);
     }
@@ -66,8 +69,10 @@ export default function TodoApp() {
 
     if (error) {
       console.error('Error adding todo:', error.message);
+      setConnectionError(error.message);
     } else if (data) {
       setTodos((prev) => [data as Todo, ...prev]);
+      setConnectionError(null);
     }
     setNewTitle('');
   }
@@ -141,6 +146,11 @@ export default function TodoApp() {
         <p className="mt-2 text-sm text-gray-500">
           Stay organized. Get things done.
         </p>
+        {supabaseAvailable && !connectionError && (
+          <p className="mt-1 text-xs text-emerald-600 font-medium">
+            🟢 Connected to Supabase
+          </p>
+        )}
       </div>
 
       {!supabaseAvailable && (
@@ -155,6 +165,22 @@ export default function TodoApp() {
             NEXT_PUBLIC_SUPABASE_ANON_KEY
           </code>{' '}
           to persist data.
+        </div>
+      )}
+
+      {connectionError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <strong>Database error:</strong> {connectionError}
+          <p className="mt-1 text-xs text-red-600">
+            Make sure the <code className="font-mono">todos</code> table exists. Run the migration SQL in
+            Supabase SQL Editor or via Summon&apos;s Database panel.
+          </p>
+          <button
+            onClick={fetchTodos}
+            className="mt-2 rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+          >
+            Retry Connection
+          </button>
         </div>
       )}
 
